@@ -152,7 +152,7 @@ let PDFViewerApplication = {
     if (!this.pdfViewer.currentScaleValue) {
       // Scale was not initialized: invalid bookmark or scale was not specified.
       // Setting the default one.
-      this.pdfViewer.currentScaleValue = 'auo';
+      this.pdfViewer.currentScaleValue = 'auto';
     }
   },
 

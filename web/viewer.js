@@ -26,4 +26,12 @@ if (document.readyState === 'interactive' ||
   webViewerLoad();
 } else {
   document.addEventListener('DOMContentLoaded', webViewerLoad, true);
+  setTimeout(() => {
+    const fileInput = document.getElementById('file');
+    fileInput.addEventListener('change', (evt) => {
+      console.log(evt)
+      const file = evt.srcElement.files[0];
+      const fileUrl = URL.createObjectURL(fileUrl);
+    })
+  }, 1000);  
 }
