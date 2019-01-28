@@ -47,35 +47,14 @@ function getViewerConfiguration() {
 
 function webViewerLoad() {
   let config = getViewerConfiguration();
-  if (typeof PDFJSDev === 'undefined' || !PDFJSDev.test('PRODUCTION')) {
-    Promise.all([
-      SystemJS.import('pdfjs-web/app'),
-      SystemJS.import('pdfjs-web/app_options'),
-      SystemJS.import('pdfjs-web/genericcom')
-    ]).then(function([app, appOptions, ...otherModules]) {
-      window.PDFViewerApplication = app.PDFViewerApplication;
-      window.PDFViewerApplicationOptions = appOptions.AppOptions;
-      app.PDFViewerApplication.run(config);
-    });
-  } else {
-    if (typeof PDFJSDev !== 'undefined' && PDFJSDev.test('CHROME')) {
-      pdfjsWebAppOptions.AppOptions.set('defaultUrl', defaultUrl);
-    }
-
-    window.PDFViewerApplication = pdfjsWebApp.PDFViewerApplication;
-    window.PDFViewerApplicationOptions = pdfjsWebAppOptions.AppOptions;
-
-    if (typeof PDFJSDev !== 'undefined' && PDFJSDev.test('GENERIC')) {
-      // Give custom implementations of the default viewer a simpler way to
-      // set various `AppOptions`, by dispatching an event once all viewer
-      // files are loaded but *before* the viewer initialization has run.
-      const event = document.createEvent('CustomEvent');
-      event.initCustomEvent('webviewerloaded', true, true, {});
-      document.dispatchEvent(event);
-    }
-
-    pdfjsWebApp.PDFViewerApplication.run(config);
-  }
+  Promise.all([
+    SystemJS.import('pdfjs-web/app'),
+    SystemJS.import('pdfjs-web/app_options'),
+  ]).then(function ([app, appOptions]) {
+    window.PDFViewerApplication = app.PDFViewerApplication;
+    window.PDFViewerApplicationOptions = appOptions.AppOptions;
+    app.PDFViewerApplication.run(config);
+  });
 }
 
 if (document.readyState === 'interactive' ||
