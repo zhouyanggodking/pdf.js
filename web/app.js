@@ -112,8 +112,6 @@ let PDFViewerApplication = {
    *                      destruction is completed.
    */
   async close() {
-    let errorWrapper = this.appConfig.errorWrapper.container;
-    errorWrapper.setAttribute('hidden', 'true');
 
     if (!this.pdfLoadingTask) {
       return;
@@ -132,11 +130,6 @@ let PDFViewerApplication = {
     this.downloadComplete = false;
     this.url = '';
     this.baseUrl = '';
-    this.contentDispositionFilename = null;
-    
-    if (typeof PDFBug !== 'undefined') {
-      PDFBug.cleanup();
-    }
     return promise;
   },
 
