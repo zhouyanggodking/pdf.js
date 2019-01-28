@@ -12,11 +12,9 @@ function getViewerConfiguration() {
 function webViewerLoad() {
   let config = getViewerConfiguration();
   Promise.all([
-    SystemJS.import('pdfjs-web/app'),
-    SystemJS.import('pdfjs-web/app_options'),
-  ]).then(function ([app, appOptions]) {
+    SystemJS.import('pdfjs-web/app')
+  ]).then(function ([app]) {
     window.PDFViewerApplication = app.PDFViewerApplication;
-    window.PDFViewerApplicationOptions = appOptions.AppOptions;
     app.PDFViewerApplication.run(config);
   });
 }
