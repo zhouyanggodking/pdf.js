@@ -532,13 +532,13 @@ let PDFViewerApplication = {
   },
 
   setInitialView() {
-    //this.isInitialViewSet = true;
+    this.isInitialViewSet = true;
 
-    //if (!this.pdfViewer.currentScaleValue) {
-    //  // Scale was not initialized: invalid bookmark or scale was not specified.
-    //  // Setting the default one.
-    //  this.pdfViewer.currentScaleValue = DEFAULT_SCALE_VALUE;
-    //}
+    if (!this.pdfViewer.currentScaleValue) {
+      // Scale was not initialized: invalid bookmark or scale was not specified.
+      // Setting the default one.
+      this.pdfViewer.currentScaleValue = DEFAULT_SCALE_VALUE;
+    }
   },
 
   cleanup() {
@@ -556,56 +556,12 @@ let PDFViewerApplication = {
 };
 
 function webViewerInitialized() {
-  let appConfig = PDFViewerApplication.appConfig;
-  let file;
-  if (typeof PDFJSDev === 'undefined' || PDFJSDev.test('GENERIC')) {
-    let queryString = document.location.search.substring(1);
-    let params = parseQueryString(queryString);
-    file = 'file' in params ? params.file : AppOptions.get('defaultUrl');
-  } else if (PDFJSDev.test('FIREFOX || MOZCENTRAL')) {
-    file = window.location.href.split('#')[0];
-  } else if (PDFJSDev.test('CHROME')) {
-    file = AppOptions.get('defaultUrl');
-  }
-
-  if (typeof PDFJSDev === 'undefined' || PDFJSDev.test('GENERIC')) {
-    let fileInput = document.createElement('input');
-    fileInput.id = appConfig.openFileInputName;
-    fileInput.className = 'fileInput';
-    fileInput.setAttribute('type', 'file');
-    document.body.appendChild(fileInput);
-
-    if (!window.File || !window.FileReader ||
-        !window.FileList || !window.Blob) {
-    } else {
-      fileInput.value = null;
-    }
-
-    fileInput.addEventListener('change', function(evt) {
-      let files = evt.target.files;
-      if (!files || files.length === 0) {
-        return;
-      }
-    });
-
-  } 
-
-  if (typeof PDFJSDev !== 'undefined' &&
-      PDFJSDev.test('FIREFOX || MOZCENTRAL') &&
-      !PDFViewerApplication.supportsDocumentFonts) {
-    AppOptions.set('disableFontFace', true);
-    PDFViewerApplication.l10n.get('web_fonts_disabled', null,
-      'Web fonts are disabled: unable to use embedded PDF fonts.').
-        then((msg) => {
-      console.warn(msg);
-    });
-  }
-
-
+  let file = AppOptions.get('defaultUrl');
 
   try {
     webViewerOpenFileViaURL(file);
   } catch (reason) {
+    console.log('error')
     PDFViewerApplication.l10n.get('loading_error', null,
         'An error occurred while loading the PDF.').then((msg) => {
       PDFViewerApplication.error(msg, reason);
@@ -615,6 +571,7 @@ function webViewerInitialized() {
 
 let webViewerOpenFileViaURL;
 if (typeof PDFJSDev === 'undefined' || PDFJSDev.test('GENERIC')) {
+  console.log('king')
   webViewerOpenFileViaURL = function webViewerOpenFileViaURL(file) {
     if (file && file.lastIndexOf('file:', 0) === 0) {
       // file:-scheme. Load the contents in the main thread because QtWebKit
@@ -639,203 +596,8 @@ if (typeof PDFJSDev === 'undefined' || PDFJSDev.test('GENERIC')) {
       PDFViewerApplication.open(file);
     }
   };
-} else if (PDFJSDev.test('FIREFOX || MOZCENTRAL || CHROME')) {
-  webViewerOpenFileViaURL = function webViewerOpenFileViaURL(file) {
-    PDFViewerApplication.setTitleUsingUrl(file);
-    PDFViewerApplication.initPassiveLoading();
-  };
-} else {
-  webViewerOpenFileViaURL = function webViewerOpenFileViaURL(file) {
-    if (file) {
-      throw new Error('Not implemented: webViewerOpenFileViaURL');
-    }
-  };
 }
 
-function webViewerPageRendered(evt) {
-  let pageNumber = evt.pageNumber;
-  let pageIndex = pageNumber - 1;
-  let pageView = PDFViewerApplication.pdfViewer.getPageView(pageIndex);
-
-  // Prevent errors in the edge-case where the PDF document is removed *before*
-  // the 'pagerendered' event handler is invoked.
-  if (!pageView) {
-    return;
-  }
-
-
-  if (typeof Stats !== 'undefined' && Stats.enabled && pageView.stats) {
-    Stats.add(pageNumber, pageView.stats);
-  }
-
-  if (pageView.error) {
-    PDFViewerApplication.l10n.get('rendering_error', null,
-        'An error occurred while rendering the page.').then((msg) => {
-      PDFViewerApplication.error(msg, pageView.error);
-    });
-  }
-
-  if (typeof PDFJSDev !== 'undefined' &&
-      PDFJSDev.test('FIREFOX || MOZCENTRAL')) {
-    PDFViewerApplication.externalServices.reportTelemetry({
-      type: 'pageInfo',
-    });
-    // It is a good time to report stream and font types.
-    PDFViewerApplication.pdfDocument.getStats().then(function (stats) {
-      PDFViewerApplication.externalServices.reportTelemetry({
-        type: 'documentStats',
-        stats,
-      });
-    });
-  }
-}
-
-function webViewerTextLayerRendered(evt) {
-  if (typeof PDFJSDev !== 'undefined' &&
-      PDFJSDev.test('FIREFOX || MOZCENTRAL') &&
-      evt.numTextDivs > 0 && !PDFViewerApplication.supportsDocumentColors) {
-    PDFViewerApplication.l10n.get('document_colors_not_allowed', null,
-      'PDF documents are not allowed to use their own colors: ' +
-      '\'Allow pages to choose their own colors\' ' +
-      'is deactivated in the browser.').
-        then((msg) => {
-      console.error(msg);
-    });
-    PDFViewerApplication.fallback();
-  }
-}
-
-function webViewerPageMode(evt) {
-  // Handle the 'pagemode' hash parameter, see also `PDFLinkService_setHash`.
-  let mode = evt.mode, view;
-  switch (mode) {
-    case 'thumbs':
-      view = SidebarView.THUMBS;
-      break;
-    case 'bookmarks':
-    case 'outline':
-      view = SidebarView.OUTLINE;
-      break;
-    case 'attachments':
-      view = SidebarView.ATTACHMENTS;
-      break;
-    case 'none':
-      view = SidebarView.NONE;
-      break;
-    default:
-      console.error('Invalid "pagemode" hash parameter: ' + mode);
-      return;
-  }
-}
-
-function webViewerNamedAction(evt) {
-  // Processing couple of named actions that might be useful.
-  // See also PDFLinkService.executeNamedAction
-  let action = evt.action;
-  switch (action) {
-    case 'GoToPage':
-      break;
-
-    case 'Find':
-      if (!PDFViewerApplication.supportsIntegratedFind) {
-        PDFViewerApplication.findBar.toggle();
-      }
-      break;
-  }
-}
-
-function webViewerPresentationModeChanged(evt) {
-  let { active, switchInProgress, } = evt;
-  PDFViewerApplication.pdfViewer.presentationModeState =
-    switchInProgress ? PresentationModeState.CHANGING :
-    active ? PresentationModeState.FULLSCREEN : PresentationModeState.NORMAL;
-}
-
-function webViewerSidebarViewChanged(evt) {
-
-  let store = PDFViewerApplication.store;
-  if (store && PDFViewerApplication.isInitialViewSet) {
-    // Only update the storage when the document has been loaded *and* rendered.
-    store.set('sidebarView', evt.view).catch(function() { });
-  }
-}
-
-function webViewerUpdateViewarea(evt) {
-  let location = evt.location, store = PDFViewerApplication.store;
-
-}
-
-function webViewerScrollModeChanged(evt) {
-  let store = PDFViewerApplication.store;
-  if (store && PDFViewerApplication.isInitialViewSet) {
-    // Only update the storage when the document has been loaded *and* rendered.
-    store.set('scrollMode', evt.mode).catch(function() { });
-  }
-}
-
-function webViewerSpreadModeChanged(evt) {
-  let store = PDFViewerApplication.store;
-  if (store && PDFViewerApplication.isInitialViewSet) {
-    // Only update the storage when the document has been loaded *and* rendered.
-    store.set('spreadMode', evt.mode).catch(function() { });
-  }
-}
-
-function webViewerResize() {
-  let { pdfDocument, pdfViewer, } = PDFViewerApplication;
-  if (!pdfDocument) {
-    return;
-  }
-  let currentScaleValue = pdfViewer.currentScaleValue;
-  if (currentScaleValue === 'auto' ||
-      currentScaleValue === 'page-fit' ||
-      currentScaleValue === 'page-width') {
-    // Note: the scale is constant for 'page-actual'.
-    pdfViewer.currentScaleValue = currentScaleValue;
-  }
-  pdfViewer.update();
-}
-
-function webViewerHashchange(evt) {
-  let hash = evt.hash;
-  if (!hash) {
-    return;
-  }
-  if (!PDFViewerApplication.isInitialViewSet) {
-    PDFViewerApplication.initialBookmark = hash;
-  } else if (!PDFViewerApplication.pdfHistory.popStateInProgress) {
-    PDFViewerApplication.pdfLinkService.setHash(hash);
-  }
-}
-
-let webViewerFileInputChange;
-if (typeof PDFJSDev === 'undefined' || PDFJSDev.test('GENERIC')) {
-  webViewerFileInputChange = function webViewerFileInputChange(evt) {
-    if (PDFViewerApplication.pdfViewer &&
-        PDFViewerApplication.pdfViewer.isInPresentationMode) {
-      return; // Opening a new PDF file isn't supported in Presentation Mode.
-    }
-    let file = evt.fileInput.files[0];
-
-    if (URL.createObjectURL && !AppOptions.get('disableCreateObjectURL')) {
-      let url = URL.createObjectURL(file);
-      if (file.name) {
-        url = { url, originalUrl: file.name, };
-      }
-      PDFViewerApplication.open(url);
-    } else {
-      PDFViewerApplication.setTitleUsingUrl(file.name);
-      // Read the local file into a Uint8Array.
-      let fileReader = new FileReader();
-      fileReader.onload = function webViewerChangeFileReaderOnload(evt) {
-        let buffer = evt.target.result;
-        PDFViewerApplication.open(new Uint8Array(buffer));
-      };
-      fileReader.readAsArrayBuffer(file);
-    }
-
-  };
-}
 
 function webViewerPresentationMode() {
   PDFViewerApplication.requestPresentationMode();
