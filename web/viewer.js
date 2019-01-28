@@ -170,8 +170,7 @@ function webViewerLoad() {
     Promise.all([
       SystemJS.import('pdfjs-web/app'),
       SystemJS.import('pdfjs-web/app_options'),
-      SystemJS.import('pdfjs-web/genericcom'),
-      SystemJS.import('pdfjs-web/pdf_print_service'),
+      SystemJS.import('pdfjs-web/genericcom')
     ]).then(function([app, appOptions, ...otherModules]) {
       window.PDFViewerApplication = app.PDFViewerApplication;
       window.PDFViewerApplicationOptions = appOptions.AppOptions;
