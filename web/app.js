@@ -1,12 +1,5 @@
-
 import {
-  DEFAULT_SCALE_VALUE,
-  getPDFFileNameFromURL,
-  parseQueryString
-} from './ui_utils';
-import {
-  getDocument, getFilenameFromUrl, GlobalWorkerOptions, UNSUPPORTED_FEATURES,
-  version
+  getDocument, GlobalWorkerOptions
 } from 'pdfjs-lib';
 import { PDFRenderingQueue } from './pdf_rendering_queue';
 import { PDFLinkService } from './pdf_link_service';
@@ -159,7 +152,7 @@ let PDFViewerApplication = {
     if (!this.pdfViewer.currentScaleValue) {
       // Scale was not initialized: invalid bookmark or scale was not specified.
       // Setting the default one.
-      this.pdfViewer.currentScaleValue = DEFAULT_SCALE_VALUE;
+      this.pdfViewer.currentScaleValue = 'auo';
     }
   },
 
