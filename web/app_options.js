@@ -28,133 +28,27 @@ const OptionKind = {
  *              compare with the format of `default_preferences.json`.
  */
 const defaultOptions = {
-  cursorToolOnLoad: {
-    /** @type {number} */
-    value: 0,
-    kind: OptionKind.VIEWER,
-  },
   defaultUrl: {
     /** @type {string} */
     value: 'compressed.tracemonkey-pldi-09.pdf',
-    kind: OptionKind.VIEWER,
-  },
-  defaultZoomValue: {
-    /** @type {string} */
-    value: '',
-    kind: OptionKind.VIEWER,
-  },
-  disableHistory: {
-    /** @type {boolean} */
-    value: false,
-    kind: OptionKind.VIEWER,
-  },
-  disableOpenActionDestination: {
-    /** @type {boolean} */
-    value: true,
-    kind: OptionKind.VIEWER,
-  },
-  disablePageLabels: {
-    /** @type {boolean} */
-    value: false,
-    kind: OptionKind.VIEWER,
-  },
-  disablePageMode: {
-    /** @type {boolean} */
-    value: false,
-    kind: OptionKind.VIEWER,
-  },
-  /**
-   * The `disablePreferences` is, conditionally, defined below.
-   */
-  enablePrintAutoRotate: {
-    /** @type {boolean} */
-    value: false,
     kind: OptionKind.VIEWER,
   },
   enableWebGL: {
     /** @type {boolean} */
     value: false,
     kind: OptionKind.VIEWER,
-  },
-  eventBusDispatchToDOM: {
-    /** @type {boolean} */
-    value: false,
-    kind: OptionKind.VIEWER,
-  },
-  externalLinkRel: {
-    /** @type {string} */
-    value: 'noopener noreferrer nofollow',
-    kind: OptionKind.VIEWER,
-  },
-  externalLinkTarget: {
-    /** @type {number} */
-    value: 0,
-    kind: OptionKind.VIEWER,
-  },
-  historyUpdateUrl: {
-    /** @type {boolean} */
-    value: false,
-    kind: OptionKind.VIEWER,
-  },
-  imageResourcesPath: {
-    /** @type {string} */
-    value: './images/',
-    kind: OptionKind.VIEWER,
-  },
-  /**
-   * The `locale` is, conditionally, defined below.
-   */
-  maxCanvasPixels: {
-    /** @type {number} */
-    value: viewerCompatibilityParams.maxCanvasPixels || 16777216,
-    kind: OptionKind.VIEWER,
-  },
-  pdfBugEnabled: {
-    /** @type {boolean} */
-    value: false,
-    kind: OptionKind.VIEWER,
-  },
+  },  
   renderer: {
     /** @type {string} */
     value: 'canvas',
     kind: OptionKind.VIEWER,
   },
-  renderInteractiveForms: {
-    /** @type {boolean} */
-    value: false,
-    kind: OptionKind.VIEWER,
-  },
-  showPreviousViewOnLoad: {
-    /** @type {boolean} */
-    value: true,
-    kind: OptionKind.VIEWER,
-  },
-  sidebarViewOnLoad: {
-    /** @type {number} */
-    value: 0,
-    kind: OptionKind.VIEWER,
-  },
-  scrollModeOnLoad: {
-    /** @type {number} */
-    value: 0,
-    kind: OptionKind.VIEWER,
-  },
-  spreadModeOnLoad: {
-    /** @type {number} */
-    value: 0,
-    kind: OptionKind.VIEWER,
-  },
+ 
   textLayerMode: {
     /** @type {number} */
     value: 1,
     kind: OptionKind.VIEWER,
   },
-  useOnlyCssZoom: {
-    /** @type {boolean} */
-    value: false,
-    kind: OptionKind.VIEWER,
-  },
-
   cMapPacked: {
     /** @type {boolean} */
     value: true,
@@ -176,47 +70,6 @@ const defaultOptions = {
     value: apiCompatibilityParams.disableCreateObjectURL || false,
     kind: OptionKind.API,
   },
-  disableFontFace: {
-    /** @type {boolean} */
-    value: false,
-    kind: OptionKind.API,
-  },
-  disableRange: {
-    /** @type {boolean} */
-    value: false,
-    kind: OptionKind.API,
-  },
-  disableStream: {
-    /** @type {boolean} */
-    value: false,
-    kind: OptionKind.API,
-  },
-  isEvalSupported: {
-    /** @type {boolean} */
-    value: true,
-    kind: OptionKind.API,
-  },
-  maxImageSize: {
-    /** @type {number} */
-    value: -1,
-    kind: OptionKind.API,
-  },
-  pdfBug: {
-    /** @type {boolean} */
-    value: false,
-    kind: OptionKind.API,
-  },
-  postMessageTransfers: {
-    /** @type {boolean} */
-    value: true,
-    kind: OptionKind.API,
-  },
-  verbosity: {
-    /** @type {number} */
-    value: 1,
-    kind: OptionKind.API,
-  },
-
   workerPort: {
     /** @type {Object} */
     value: null,
@@ -229,20 +82,6 @@ const defaultOptions = {
     kind: OptionKind.WORKER,
   },
 };
-if (typeof PDFJSDev === 'undefined' ||
-    PDFJSDev.test('!PRODUCTION || GENERIC')) {
-  defaultOptions.disablePreferences = {
-    /** @type {boolean} */
-    value: false,
-    kind: OptionKind.VIEWER,
-  };
-  defaultOptions.locale = {
-    /** @type {string} */
-    value: (typeof navigator !== 'undefined' ? navigator.language : 'en-US'),
-    kind: OptionKind.VIEWER,
-  };
-}
-
 const userOptions = Object.create(null);
 
 class AppOptions {

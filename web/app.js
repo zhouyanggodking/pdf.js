@@ -9,7 +9,6 @@ import {
   version
 } from 'pdfjs-lib';
 import { PDFRenderingQueue } from './pdf_rendering_queue';
-import { AppOptions } from './app_options';
 import { PDFLinkService } from './pdf_link_service';
 import { PDFViewer } from './pdf_viewer';
 
@@ -58,7 +57,7 @@ let PDFViewerApplication = {
       viewer,
       renderingQueue: pdfRenderingQueue,
       linkService: pdfLinkService,
-      renderer: AppOptions.get('renderer')// canvas
+      renderer: 'canvas'
     });
     pdfRenderingQueue.setViewer(this.pdfViewer);
     pdfLinkService.setViewer(this.pdfViewer);
@@ -67,43 +66,7 @@ let PDFViewerApplication = {
   run(config) {
     this.initialize(config).then(webViewerInitialized);
   },
-
-  get pagesCount() {
-    return this.pdfDocument ? this.pdfDocument.numPages : 0;
-  },
-
-  set page(val) {
-    this.pdfViewer.currentPageNumber = val;
-  },
-
-  get page() {
-    return this.pdfViewer.currentPageNumber;
-  },
-
-  setTitleUsingUrl(url = '') {
-    this.url = url;
-    this.baseUrl = url.split('#')[0];
-    let title = getPDFFileNameFromURL(url, '');
-    if (!title) {
-      try {
-        title = decodeURIComponent(getFilenameFromUrl(url)) || url;
-      } catch (ex) {
-        // decodeURIComponent may throw URIError,
-        // fall back to using the unprocessed url in that case
-        title = url;
-      }
-    }
-    this.setTitle(title);
-  },
-
-  setTitle(title) {
-    if (this.isViewerEmbedded) {
-      // Embedded PDF viewers should not be changing their parent page's title.
-      return;
-    }
-    document.title = title;
-  },
-
+ 
   /**
    * Closes opened PDF document.
    * @returns {Promise} - Returns the promise, which is resolved when all
@@ -128,23 +91,16 @@ let PDFViewerApplication = {
     this.baseUrl = '';
     return promise;
   },
-
-  /**
-   * Opens PDF document specified by URL or array with additional arguments.
-   * @param {string|TypedArray|ArrayBuffer} file - PDF location or binary data.
-   * @param {Object} args - (optional) Additional arguments for the getDocument
-   *                        call, e.g. HTTP headers ('httpHeaders') or
-   *                        alternative data transport ('range').
-   * @returns {Promise} - Returns the promise, which is resolved when document
-   *                      is opened.
-   */
   async open(file, args) {
     if (this.pdfLoadingTask) {
       // We need to destroy already opened document.
       await this.close();
     }
     // Set the necessary global worker parameters, using the available options.
-    const workerParameters = AppOptions.getAll('worker');
+    const workerParameters = {
+      workerPort: null,
+      workerSrc: '../src/worker_loader.js'
+    };
     for (let key in workerParameters) {
       GlobalWorkerOptions[key] = workerParameters[key];
     }
@@ -227,7 +183,7 @@ let PDFViewerApplication = {
 };
 
 function webViewerInitialized() {
-  let file = AppOptions.get('defaultUrl');
+  let file = 'compressed.tracemonkey-pldi-09.pdf';
 
   try {
     webViewerOpenFileViaURL(file);
