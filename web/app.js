@@ -21,12 +21,7 @@ let PDFViewerApplication = {
   /** @type {PDFRenderingQueue} */
   pdfRenderingQueue: null,
   /** @type {PDFLinkService} */
-  pdfLinkService: null, 
-  
-  /** @type {EventBus} */
-  eventBus: null,
-  url: '',
-  baseUrl: '',
+  pdfLinkService: null,
 
   // Called once when the document is loaded.
   async initialize(appConfig) {
