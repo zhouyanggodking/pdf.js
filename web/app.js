@@ -36,30 +36,8 @@ let PDFViewerApplication = {
   async initialize(appConfig) {
     //this.preferences = this.externalServices.createPreferences();
     this.appConfig = appConfig;
-    await this._parseHashParameters();
     await this._initializeViewerComponents();
     this.initialized = true;
-  },
-
-  /**
-   * @private
-   */
-  async _parseHashParameters() {
-    const waitOn = [];
-
-    // Special debugging flags in the hash section of the URL.
-    let hash = document.location.hash.substring(1);
-    let hashParams = parseQueryString(hash);
- 
-    if ((typeof PDFJSDev === 'undefined' || !PDFJSDev.test('PRODUCTION')) &&
-        hashParams['disablebcmaps'] === 'true') {
-      AppOptions.set('cMapUrl', '../external/cmaps/');
-      AppOptions.set('cMapPacked', false);
-    }   
-
-    return Promise.all(waitOn).catch((reason) => {
-      console.error(`_parseHashParameters: "${reason.message}".`);
-    });
   },
 
   /**
