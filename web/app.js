@@ -32,7 +32,6 @@ import { PDFLinkService } from './pdf_link_service';
 import { PDFViewer } from './pdf_viewer';
 
 const DEFAULT_SCALE_DELTA = 1.1;
-const DISABLE_AUTO_FETCH_LOADING_BAR_TIMEOUT = 5000; // ms
 const FORCE_PAGES_LOADED_TIMEOUT = 10000; // ms
 const WHEEL_ZOOM_DISABLED_TIMEOUT = 1000; // ms
 
@@ -119,10 +118,8 @@ let PDFViewerApplication = {
 
   // Called once when the document is loaded.
   async initialize(appConfig) {
-    this.preferences = this.externalServices.createPreferences();
+    //this.preferences = this.externalServices.createPreferences();
     this.appConfig = appConfig;
-
-    await this._readPreferences();
     await this._parseHashParameters();
     await this._initializeL10n();
 
@@ -134,11 +131,7 @@ let PDFViewerApplication = {
     }
     await this._initializeViewerComponents();
 
-    // Bind the various event handlers *after* the viewer has been
-    // initialized, to prevent errors if an event arrives too soon.
-    this.bindEvents();
-    this.bindWindowEvents();
-
+    
     // We can start UI localization now.
     let appContainer = appConfig.appContainer || document.documentElement;
     this.l10n.translate(appContainer).then(() => {
@@ -148,23 +141,6 @@ let PDFViewerApplication = {
     });
 
     this.initialized = true;
-  },
-
-  /**
-   * @private
-   */
-  async _readPreferences() {
-    if (AppOptions.get('disablePreferences') === true) {
-      // Give custom implementations of the default viewer a simpler way to
-      // opt-out of having the `Preferences` override existing `AppOptions`.
-      return;
-    }
-    try {
-      const prefs = await this.preferences.getAll();
-      for (const name in prefs) {
-        AppOptions.set(name, prefs[name]);
-      }
-    } catch (reason) { }
   },
 
   /**
@@ -180,65 +156,12 @@ let PDFViewerApplication = {
     // Special debugging flags in the hash section of the URL.
     let hash = document.location.hash.substring(1);
     let hashParams = parseQueryString(hash);
-
-    if ('disableworker' in hashParams &&
-        hashParams['disableworker'] === 'true') {
-      waitOn.push(loadFakeWorker());
-    }
-    if ('disablerange' in hashParams) {
-      AppOptions.set('disableRange', hashParams['disablerange'] === 'true');
-    }
-    if ('disablestream' in hashParams) {
-      AppOptions.set('disableStream', hashParams['disablestream'] === 'true');
-    }
-    if ('disableautofetch' in hashParams) {
-      AppOptions.set('disableAutoFetch',
-                     hashParams['disableautofetch'] === 'true');
-    }
-    if ('disablefontface' in hashParams) {
-      AppOptions.set('disableFontFace',
-                     hashParams['disablefontface'] === 'true');
-    }
-    if ('disablehistory' in hashParams) {
-      AppOptions.set('disableHistory', hashParams['disablehistory'] === 'true');
-    }
-    if ('webgl' in hashParams) {
-      AppOptions.set('enableWebGL', hashParams['webgl'] === 'true');
-    }
-    if ('useonlycsszoom' in hashParams) {
-      AppOptions.set('useOnlyCssZoom', hashParams['useonlycsszoom'] === 'true');
-    }
-    if ('verbosity' in hashParams) {
-      AppOptions.set('verbosity', hashParams['verbosity'] | 0);
-    }
+ 
     if ((typeof PDFJSDev === 'undefined' || !PDFJSDev.test('PRODUCTION')) &&
         hashParams['disablebcmaps'] === 'true') {
       AppOptions.set('cMapUrl', '../external/cmaps/');
       AppOptions.set('cMapPacked', false);
-    }
-    if ('textlayer' in hashParams) {
-      switch (hashParams['textlayer']) {
-        case 'off':
-          AppOptions.set('textLayerMode', TextLayerMode.DISABLE);
-          break;
-        case 'visible':
-        case 'shadow':
-        case 'hover':
-          let viewer = this.appConfig.viewerContainer;
-          viewer.classList.add('textLayer-' + hashParams['textlayer']);
-          break;
-      }
-    }
-    if ('pdfbug' in hashParams) {
-      AppOptions.set('pdfBug', true);
-      let enabled = hashParams['pdfbug'].split(',');
-      waitOn.push(loadAndEnablePDFBug(enabled));
-    }
-    // It is not possible to change locale for the (various) extension builds.
-    if ((typeof PDFJSDev === 'undefined' ||
-         PDFJSDev.test('!PRODUCTION || GENERIC')) && 'locale' in hashParams) {
-      AppOptions.set('locale', hashParams['locale']);
-    }
+    }   
 
     return Promise.all(waitOn).catch((reason) => {
       console.error(`_parseHashParameters: "${reason.message}".`);
@@ -267,7 +190,7 @@ let PDFViewerApplication = {
     this.eventBus = eventBus;
 
     let pdfRenderingQueue = new PDFRenderingQueue();
-    pdfRenderingQueue.onIdle = this.cleanup.bind(this);
+    //pdfRenderingQueue.onIdle = this.cleanup.bind(this);
     this.pdfRenderingQueue = pdfRenderingQueue;
 
     let pdfLinkService = new PDFLinkService({
@@ -285,14 +208,7 @@ let PDFViewerApplication = {
       eventBus,
       renderingQueue: pdfRenderingQueue,
       linkService: pdfLinkService,
-      renderer: AppOptions.get('renderer'),
-      enableWebGL: AppOptions.get('enableWebGL'),
-      textLayerMode: AppOptions.get('textLayerMode'),
-      imageResourcesPath: AppOptions.get('imageResourcesPath'),
-      renderInteractiveForms: AppOptions.get('renderInteractiveForms'),
-      enablePrintAutoRotate: AppOptions.get('enablePrintAutoRotate'),
-      useOnlyCssZoom: AppOptions.get('useOnlyCssZoom'),
-      maxCanvasPixels: AppOptions.get('maxCanvasPixels'),
+      renderer: AppOptions.get('renderer')
     });
     pdfRenderingQueue.setViewer(this.pdfViewer);
     pdfLinkService.setViewer(this.pdfViewer);
@@ -1003,68 +919,26 @@ let PDFViewerApplication = {
       return; // run cleanup when document is loaded
     }
     this.pdfViewer.cleanup();
-    this.pdfThumbnailViewer.cleanup();
 
     // We don't want to remove fonts used by active page SVGs.
-    if (this.pdfViewer.renderer !== RendererType.SVG) {
-      this.pdfDocument.cleanup();
-    }
+    //if (this.pdfViewer.renderer !== RendererType.SVG) {
+    //  this.pdfDocument.cleanup();
+    //}
+    this.pdfDocument.cleanup();
   },
 
   forceRendering() {
   },
 
   beforePrint() {
-    if (this.printService) {
-      // There is no way to suppress beforePrint/afterPrint events,
-      // but PDFPrintService may generate double events -- this will ignore
-      // the second event that will be coming from native window.print().
-      return;
-    }
+    
 
-    if (!this.supportsPrinting) {
-      this.l10n.get('printing_not_supported', null,
-                    'Warning: Printing is not fully supported by ' +
-                    'this browser.').then((printMessage) => {
-        this.error(printMessage);
-      });
-      return;
-    }
-
-    // The beforePrint is a sync method and we need to know layout before
-    // returning from this method. Ensure that we can get sizes of the pages.
-    if (!this.pdfViewer.pageViewsReady) {
-      this.l10n.get('printing_not_ready', null,
-                    'Warning: The PDF is not fully loaded for printing.').
-          then((notReadyMessage) => {
-        window.alert(notReadyMessage);
-      });
-      return;
-    }
-
-    let pagesOverview = this.pdfViewer.getPagesOverview();
-    let printContainer = this.appConfig.printContainer;
-    let printService = PDFPrintServiceFactory.instance.createPrintService(
-      this.pdfDocument, pagesOverview, printContainer, this.l10n);
-    this.printService = printService;
-    this.forceRendering();
-
-    printService.layout();
-
-    if (typeof PDFJSDev !== 'undefined' &&
-        PDFJSDev.test('FIREFOX || MOZCENTRAL')) {
-      this.externalServices.reportTelemetry({
-        type: 'print',
-      });
-    }
+    
+    
   },
 
   afterPrint: function pdfViewSetupAfterPrint() {
-    if (this.printService) {
-      this.printService.destroy();
-      this.printService = null;
-    }
-    this.forceRendering();
+    
   },
 
   rotatePages(delta) {
@@ -1082,150 +956,7 @@ let PDFViewerApplication = {
       return;
     }
     this.pdfPresentationMode.request();
-  },
-
-  bindEvents() {
-    let { eventBus, _boundEvents, } = this;
-
-    _boundEvents.beforePrint = this.beforePrint.bind(this);
-    _boundEvents.afterPrint = this.afterPrint.bind(this);
-
-    eventBus.on('resize', webViewerResize);
-    eventBus.on('hashchange', webViewerHashchange);
-    eventBus.on('beforeprint', _boundEvents.beforePrint);
-    eventBus.on('afterprint', _boundEvents.afterPrint);
-    eventBus.on('pagerendered', webViewerPageRendered);
-    eventBus.on('textlayerrendered', webViewerTextLayerRendered);
-    eventBus.on('updateviewarea', webViewerUpdateViewarea);
-    eventBus.on('pagechanging', webViewerPageChanging);
-    eventBus.on('scalechanging', webViewerScaleChanging);
-    eventBus.on('rotationchanging', webViewerRotationChanging);
-    eventBus.on('sidebarviewchanged', webViewerSidebarViewChanged);
-    eventBus.on('pagemode', webViewerPageMode);
-    eventBus.on('namedaction', webViewerNamedAction);
-    eventBus.on('presentationmodechanged', webViewerPresentationModeChanged);
-    eventBus.on('presentationmode', webViewerPresentationMode);
-    eventBus.on('openfile', webViewerOpenFile);
-    eventBus.on('print', webViewerPrint);
-    eventBus.on('download', webViewerDownload);
-    eventBus.on('firstpage', webViewerFirstPage);
-    eventBus.on('lastpage', webViewerLastPage);
-    eventBus.on('nextpage', webViewerNextPage);
-    eventBus.on('previouspage', webViewerPreviousPage);
-    eventBus.on('zoomin', webViewerZoomIn);
-    eventBus.on('zoomout', webViewerZoomOut);
-    eventBus.on('pagenumberchanged', webViewerPageNumberChanged);
-    eventBus.on('scalechanged', webViewerScaleChanged);
-    eventBus.on('rotatecw', webViewerRotateCw);
-    eventBus.on('rotateccw', webViewerRotateCcw);
-    eventBus.on('switchscrollmode', webViewerSwitchScrollMode);
-    eventBus.on('scrollmodechanged', webViewerScrollModeChanged);
-    eventBus.on('switchspreadmode', webViewerSwitchSpreadMode);
-    eventBus.on('spreadmodechanged', webViewerSpreadModeChanged);
-    eventBus.on('documentproperties', webViewerDocumentProperties);
-    eventBus.on('find', webViewerFind);
-    eventBus.on('findfromurlhash', webViewerFindFromUrlHash);
-    eventBus.on('updatefindmatchescount', webViewerUpdateFindMatchesCount);
-    eventBus.on('updatefindcontrolstate', webViewerUpdateFindControlState);
-    if (typeof PDFJSDev === 'undefined' || PDFJSDev.test('GENERIC')) {
-      eventBus.on('fileinputchange', webViewerFileInputChange);
-    }
-  },
-
-  bindWindowEvents() {
-    let { eventBus, _boundEvents, } = this;
-
-    _boundEvents.windowResize = () => {
-      eventBus.dispatch('resize', { source: window, });
-    };
-    _boundEvents.windowHashChange = () => {
-      eventBus.dispatch('hashchange', {
-        source: window,
-        hash: document.location.hash.substring(1),
-      });
-    };
-    _boundEvents.windowBeforePrint = () => {
-      eventBus.dispatch('beforeprint', { source: window, });
-    };
-    _boundEvents.windowAfterPrint = () => {
-      eventBus.dispatch('afterprint', { source: window, });
-    };
-
-    window.addEventListener('visibilitychange', webViewerVisibilityChange);
-    window.addEventListener('wheel', webViewerWheel);
-    window.addEventListener('click', webViewerClick);
-    window.addEventListener('keydown', webViewerKeyDown);
-    window.addEventListener('resize', _boundEvents.windowResize);
-    window.addEventListener('hashchange', _boundEvents.windowHashChange);
-    window.addEventListener('beforeprint', _boundEvents.windowBeforePrint);
-    window.addEventListener('afterprint', _boundEvents.windowAfterPrint);
-  },
-
-  unbindEvents() {
-    let { eventBus, _boundEvents, } = this;
-
-    eventBus.off('resize', webViewerResize);
-    eventBus.off('hashchange', webViewerHashchange);
-    eventBus.off('beforeprint', _boundEvents.beforePrint);
-    eventBus.off('afterprint', _boundEvents.afterPrint);
-    eventBus.off('pagerendered', webViewerPageRendered);
-    eventBus.off('textlayerrendered', webViewerTextLayerRendered);
-    eventBus.off('updateviewarea', webViewerUpdateViewarea);
-    eventBus.off('pagechanging', webViewerPageChanging);
-    eventBus.off('scalechanging', webViewerScaleChanging);
-    eventBus.off('rotationchanging', webViewerRotationChanging);
-    eventBus.off('sidebarviewchanged', webViewerSidebarViewChanged);
-    eventBus.off('pagemode', webViewerPageMode);
-    eventBus.off('namedaction', webViewerNamedAction);
-    eventBus.off('presentationmodechanged', webViewerPresentationModeChanged);
-    eventBus.off('presentationmode', webViewerPresentationMode);
-    eventBus.off('openfile', webViewerOpenFile);
-    eventBus.off('print', webViewerPrint);
-    eventBus.off('download', webViewerDownload);
-    eventBus.off('firstpage', webViewerFirstPage);
-    eventBus.off('lastpage', webViewerLastPage);
-    eventBus.off('nextpage', webViewerNextPage);
-    eventBus.off('previouspage', webViewerPreviousPage);
-    eventBus.off('zoomin', webViewerZoomIn);
-    eventBus.off('zoomout', webViewerZoomOut);
-    eventBus.off('pagenumberchanged', webViewerPageNumberChanged);
-    eventBus.off('scalechanged', webViewerScaleChanged);
-    eventBus.off('rotatecw', webViewerRotateCw);
-    eventBus.off('rotateccw', webViewerRotateCcw);
-    eventBus.off('switchscrollmode', webViewerSwitchScrollMode);
-    eventBus.off('scrollmodechanged', webViewerScrollModeChanged);
-    eventBus.off('switchspreadmode', webViewerSwitchSpreadMode);
-    eventBus.off('spreadmodechanged', webViewerSpreadModeChanged);
-    eventBus.off('documentproperties', webViewerDocumentProperties);
-    eventBus.off('find', webViewerFind);
-    eventBus.off('findfromurlhash', webViewerFindFromUrlHash);
-    eventBus.off('updatefindmatchescount', webViewerUpdateFindMatchesCount);
-    eventBus.off('updatefindcontrolstate', webViewerUpdateFindControlState);
-    if (typeof PDFJSDev === 'undefined' || PDFJSDev.test('GENERIC')) {
-      eventBus.off('fileinputchange', webViewerFileInputChange);
-    }
-
-    _boundEvents.beforePrint = null;
-    _boundEvents.afterPrint = null;
-  },
-
-  unbindWindowEvents() {
-    let { _boundEvents, } = this;
-
-    window.removeEventListener('visibilitychange', webViewerVisibilityChange);
-    window.removeEventListener('wheel', webViewerWheel);
-    window.removeEventListener('click', webViewerClick);
-    window.removeEventListener('keydown', webViewerKeyDown);
-    window.removeEventListener('resize', _boundEvents.windowResize);
-    window.removeEventListener('hashchange', _boundEvents.windowHashChange);
-    window.removeEventListener('beforeprint', _boundEvents.windowBeforePrint);
-    window.removeEventListener('afterprint', _boundEvents.windowAfterPrint);
-
-    _boundEvents.windowResize = null;
-    _boundEvents.windowHashChange = null;
-    _boundEvents.windowBeforePrint = null;
-    _boundEvents.windowAfterPrint = null;
-  },
+  }
 };
 
 let validateFileURL;
