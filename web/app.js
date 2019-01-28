@@ -1,63 +1,20 @@
-/* Copyright 2012 Mozilla Foundation
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/* globals PDFBug, Stats */
 
 import {
-  DEFAULT_SCALE_VALUE, getGlobalEventBus,
-  getPDFFileNameFromURL, MAX_SCALE, MIN_SCALE,
+  DEFAULT_SCALE_VALUE,
+  getPDFFileNameFromURL,
   parseQueryString
 } from './ui_utils';
 import {
-  build, createObjectURL, getDocument, getFilenameFromUrl, GlobalWorkerOptions,
-  InvalidPDFException, LinkTarget, loadScript, MissingPDFException, OPS,
-  PDFWorker, shadow, UnexpectedResponseException, UNSUPPORTED_FEATURES, URL,
+  getDocument, getFilenameFromUrl, GlobalWorkerOptions,
+  InvalidPDFException,  MissingPDFException, 
+  UnexpectedResponseException, UNSUPPORTED_FEATURES,
   version
 } from 'pdfjs-lib';
-import { PDFRenderingQueue, RenderingStates } from './pdf_rendering_queue';
+import { PDFRenderingQueue } from './pdf_rendering_queue';
 import { AppOptions } from './app_options';
-import { PDFHistory } from './pdf_history';
 import { PDFLinkService } from './pdf_link_service';
-import { PDFViewer } from './pdf_viewer';
-
-const DEFAULT_SCALE_DELTA = 1.1;
+import { PDFViewer } from './pdf_viewer';;
 const FORCE_PAGES_LOADED_TIMEOUT = 10000; // ms
-const WHEEL_ZOOM_DISABLED_TIMEOUT = 1000; // ms
-
-const DefaultExternalServices = {
-  updateFindControlState(data) {},
-  updateFindMatchesCount(data) {},
-  initPassiveLoading(callbacks) {},
-  fallback(data, callback) {},
-  reportTelemetry(data) {},
-  createDownloadManager(options) {
-    throw new Error('Not implemented: createDownloadManager');
-  },
-  createPreferences() {
-    throw new Error('Not implemented: createPreferences');
-  },
-  createL10n(options) {
-    throw new Error('Not implemented: createL10n');
-  },
-  supportsIntegratedFind: false,
-  supportsDocumentFonts: true,
-  supportsDocumentColors: true,
-  supportedMouseWheelZoomModifierKeys: {
-    ctrlKey: true,
-    metaKey: true,
-  },
-};
 
 let PDFViewerApplication = {
   initialized: false,
@@ -591,18 +548,6 @@ let webViewerOpenFileViaURL = function webViewerOpenFileViaURL(file) {
 };
 
 
-/* Abstract factory for the print service. */
-let PDFPrintServiceFactory = {
-  instance: {
-    supportsPrinting: false,
-    createPrintService() {
-      throw new Error('Not implemented: createPrintService');
-    },
-  },
-};
-
 export {
-  PDFViewerApplication,
-  DefaultExternalServices,
-  PDFPrintServiceFactory,
+  PDFViewerApplication
 };
