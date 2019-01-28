@@ -22,6 +22,7 @@ let PDFViewerApplication = {
     this.appConfig = appConfig;
     await this._initializeViewerComponents();
     this.initialized = true;
+    return appConfig.url;
   },
 
   /**
@@ -79,7 +80,7 @@ let PDFViewerApplication = {
     this.baseUrl = '';
     return promise;
   },
-  async open(file, args) {
+  async open(file) {
     if (this.pdfLoadingTask) {
       // We need to destroy already opened document.
       await this.close();
@@ -170,8 +171,9 @@ let PDFViewerApplication = {
   }
 };
 
-function webViewerInitialized() {
-  let file = 'compressed.tracemonkey-pldi-09.pdf';
+function webViewerInitialized(url) {
+  console.log(url);
+  let file = url || 'compressed.tracemonkey-pldi-09.pdf';
   webViewerOpenFileViaURL(file);
 }
 
