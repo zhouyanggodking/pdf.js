@@ -108,30 +108,13 @@ let PDFViewerApplication = {
   /**
    * @private
    */
-  async _initializeL10n() {
-    this.l10n = this.externalServices.createL10n({
-      locale: AppOptions.get('locale'),
-    });
-    const dir = await this.l10n.getDirection();
-    document.getElementsByTagName('html')[0].dir = dir;
-  },
-
-  /**
-   * @private
-   */
   async _initializeViewerComponents() {
     const appConfig = this.appConfig;
-
-    const dispatchToDOM = AppOptions.get('eventBusDispatchToDOM');
-    const eventBus = appConfig.eventBus || getGlobalEventBus(dispatchToDOM);
-    this.eventBus = eventBus;
-
     let pdfRenderingQueue = new PDFRenderingQueue();
-    //pdfRenderingQueue.onIdle = this.cleanup.bind(this);
+    pdfRenderingQueue.onIdle = this.cleanup.bind(this);
     this.pdfRenderingQueue = pdfRenderingQueue;
 
     let pdfLinkService = new PDFLinkService({
-      eventBus,
       externalLinkTarget: AppOptions.get('externalLinkTarget'),
       externalLinkRel: AppOptions.get('externalLinkRel'),
     });
@@ -142,7 +125,6 @@ let PDFViewerApplication = {
     this.pdfViewer = new PDFViewer({
       container,
       viewer,
-      eventBus,
       renderingQueue: pdfRenderingQueue,
       linkService: pdfLinkService,
       renderer: AppOptions.get('renderer')
@@ -566,13 +548,6 @@ let PDFViewerApplication = {
   load(pdfDocument) {
     this.pdfDocument = pdfDocument;
 
-    pdfDocument.getDownloadInfo().then(() => {
-      this.downloadComplete = true;
-      firstPagePromise.then(() => {
-        this.eventBus.dispatch('documentloaded', { source: this, });
-      });
-    });
-
     // Since the `setInitialView` call below depends on this being resolved,
     // fetch it early to avoid delaying initial rendering of the PDF document.
     const pageModePromise = pdfDocument.getPageMode().catch(
@@ -642,7 +617,6 @@ let PDFViewerApplication = {
         this.setInitialView(hash, {
           rotation, sidebarView, scrollMode, spreadMode,
         });
-        this.eventBus.dispatch('documentinit', { source: this, });
         // Make all navigation keys work on document load,
         // unless the viewer is embedded in a web page.
         if (!this.isViewerEmbedded) {
@@ -1002,30 +976,8 @@ function webViewerInitialized() {
       if (!files || files.length === 0) {
         return;
       }
-      PDFViewerApplication.eventBus.dispatch('fileinputchange', {
-        source: this,
-        fileInput: evt.target,
-      });
     });
 
-    // Enable draging-and-dropping a new PDF file onto the viewerContainer.
-    appConfig.mainContainer.addEventListener('dragover', function(evt) {
-      evt.preventDefault();
-
-      evt.dataTransfer.dropEffect = 'move';
-    });
-    appConfig.mainContainer.addEventListener('drop', function(evt) {
-      evt.preventDefault();
-
-      const files = evt.dataTransfer.files;
-      if (!files || files.length === 0) {
-        return;
-      }
-      PDFViewerApplication.eventBus.dispatch('fileinputchange', {
-        source: this,
-        fileInput: evt.dataTransfer,
-      });
-    });
   } 
 
   if (typeof PDFJSDev !== 'undefined' &&
@@ -1039,12 +991,6 @@ function webViewerInitialized() {
     });
   }
 
-
-  appConfig.mainContainer.addEventListener('transitionend', function(evt) {
-    if (evt.target === /* mainContainer */ this) {
-      PDFViewerApplication.eventBus.dispatch('resize', { source: this, });
-    }
-  }, true);
 
 
   try {
