@@ -60,86 +60,27 @@ const DefaultExternalServices = {
 };
 
 let PDFViewerApplication = {
-  initialBookmark: document.location.hash.substring(1),
   initialized: false,
-  fellback: false,
   appConfig: null,
   pdfDocument: null,
   pdfLoadingTask: null,
-  printService: null,
-  /** @type {PDFViewer} */
   pdfViewer: null,
-  /** @type {PDFThumbnailViewer} */
-  pdfThumbnailViewer: null,
   /** @type {PDFRenderingQueue} */
   pdfRenderingQueue: null,
-  /** @type {PDFPresentationMode} */
-  pdfPresentationMode: null,
-  /** @type {PDFDocumentProperties} */
-  pdfDocumentProperties: null,
   /** @type {PDFLinkService} */
-  pdfLinkService: null,
-  /** @type {PDFHistory} */
-  pdfHistory: null,
-  /** @type {PDFSidebar} */
-  pdfSidebar: null,
-  /** @type {PDFSidebarResizer} */
-  pdfSidebarResizer: null,
-  /** @type {PDFOutlineViewer} */
-  pdfOutlineViewer: null,
-  /** @type {PDFAttachmentViewer} */
-  pdfAttachmentViewer: null,
-  /** @type {PDFCursorTools} */
-  pdfCursorTools: null,
-  /** @type {ViewHistory} */
-  store: null,
-  /** @type {DownloadManager} */
-  downloadManager: null,
-  /** @type {OverlayManager} */
-  overlayManager: null,
-  /** @type {Preferences} */
-  preferences: null,
-  /** @type {Toolbar} */
-  toolbar: null,
-  /** @type {SecondaryToolbar} */
-  secondaryToolbar: null,
+  pdfLinkService: null, 
+  
   /** @type {EventBus} */
   eventBus: null,
-  /** @type {IL10n} */
-  l10n: null,
-  isInitialViewSet: false,
-  downloadComplete: false,
-  isViewerEmbedded: (window.parent !== window),
   url: '',
   baseUrl: '',
-  externalServices: DefaultExternalServices,
-  _boundEvents: {},
-  contentDispositionFilename: null,
 
   // Called once when the document is loaded.
   async initialize(appConfig) {
     //this.preferences = this.externalServices.createPreferences();
     this.appConfig = appConfig;
     await this._parseHashParameters();
-    await this._initializeL10n();
-
-    if (this.isViewerEmbedded &&
-        AppOptions.get('externalLinkTarget') === LinkTarget.NONE) {
-      // Prevent external links from "replacing" the viewer,
-      // when it's embedded in e.g. an <iframe> or an <object>.
-      AppOptions.set('externalLinkTarget', LinkTarget.TOP);
-    }
     await this._initializeViewerComponents();
-
-    
-    // We can start UI localization now.
-    let appContainer = appConfig.appContainer || document.documentElement;
-    this.l10n.translate(appContainer).then(() => {
-      // Dispatch the 'localized' event on the `eventBus` once the viewer
-      // has been fully initialized and translated.
-      this.eventBus.dispatch('localized', { source: this, });
-    });
-
     this.initialized = true;
   },
 
@@ -147,10 +88,6 @@ let PDFViewerApplication = {
    * @private
    */
   async _parseHashParameters() {
-    if (typeof PDFJSDev !== 'undefined' && PDFJSDev.test('PRODUCTION') &&
-        !AppOptions.get('pdfBugEnabled')) {
-      return;
-    }
     const waitOn = [];
 
     // Special debugging flags in the hash section of the URL.
