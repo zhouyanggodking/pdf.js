@@ -179,10 +179,10 @@ let PDFViewerApplication = {
     pdfViewer.setDocument(pdfDocument);
     let firstPagePromise = pdfViewer.firstPagePromise;
 
-    firstPagePromise.then((pdfPage) => {
+    firstPagePromise.then(() => {
       Promise.all([
         pageModePromise, openActionDestPromise,
-      ]).then(async ([pageMode, openActionDest]) => {
+      ]).then(async () => {
         this.setInitialView();
         // eslint-disable-next-line no-self-assign
         pdfViewer.currentScaleValue = pdfViewer.currentScaleValue;
