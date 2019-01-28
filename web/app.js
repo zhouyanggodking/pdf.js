@@ -13,8 +13,7 @@ import {
 import { PDFRenderingQueue } from './pdf_rendering_queue';
 import { AppOptions } from './app_options';
 import { PDFLinkService } from './pdf_link_service';
-import { PDFViewer } from './pdf_viewer';;
-const FORCE_PAGES_LOADED_TIMEOUT = 10000; // ms
+import { PDFViewer } from './pdf_viewer';
 
 let PDFViewerApplication = {
   initialized: false,
@@ -237,93 +236,23 @@ let PDFViewerApplication = {
     const openActionDestPromise = pdfDocument.getOpenActionDestination().catch(
       function() { /* Avoid breaking initial rendering; ignoring errors. */ });
 
-
-    let baseDocumentUrl;
-    if (typeof PDFJSDev === 'undefined' || PDFJSDev.test('GENERIC')) {
-      baseDocumentUrl = null;
-    } else if (PDFJSDev.test('FIREFOX || MOZCENTRAL')) {
-      baseDocumentUrl = this.baseUrl;
-    } else if (PDFJSDev.test('CHROME')) {
-      baseDocumentUrl = location.href.split('#')[0];
-    }
-    this.pdfLinkService.setDocument(pdfDocument, baseDocumentUrl);
+    this.pdfLinkService.setDocument(pdfDocument, null);
 
     let pdfViewer = this.pdfViewer;
     pdfViewer.setDocument(pdfDocument);
+    console.log('test')
     let firstPagePromise = pdfViewer.firstPagePromise;
     let pagesPromise = pdfViewer.pagesPromise;
-    let onePageRendered = pdfViewer.onePageRendered;
 
     firstPagePromise.then((pdfPage) => {
-
-      if (!AppOptions.get('disableHistory') && !this.isViewerEmbedded) {
-      }
-
       Promise.all([
         pageModePromise, openActionDestPromise,
       ]).then(async ([pageMode, openActionDest]) => {
-        let values = {};
-        if (openActionDest && !this.initialBookmark &&
-            !AppOptions.get('disableOpenActionDestination')) {
-          // Always let the browser history/document hash take precedence.
-          this.initialBookmark = JSON.stringify(openActionDest);
-          // TODO: Re-factor the `PDFHistory` initialization to remove this hack
-          // that's currently necessary to prevent weird initial history state.
-          this.pdfHistory.push({ explicitDest: openActionDest,
-                                 pageNumber: null, });
-        }
-        const initialBookmark = this.initialBookmark;
-        // Initialize the default values, from user preferences.
-        const zoom = AppOptions.get('defaultZoomValue');
-        let hash = zoom ? `zoom=${zoom}` : null;
-
-        let rotation = null;
-        let sidebarView = AppOptions.get('sidebarViewOnLoad');
-        let scrollMode = AppOptions.get('scrollModeOnLoad');
-        let spreadMode = AppOptions.get('spreadModeOnLoad');
-
-        if (values.page && AppOptions.get('showPreviousViewOnLoad')) {
-          hash = 'page=' + values.page + '&zoom=' + (zoom || values.zoom) +
-            ',' + values.scrollLeft + ',' + values.scrollTop;
-
-          rotation = parseInt(values.rotation, 10);
-          sidebarView = sidebarView || (values.sidebarView | 0);
-          scrollMode = scrollMode || (values.scrollMode | 0);
-          spreadMode = spreadMode || (values.spreadMode | 0);
-        }
-
-        this.setInitialView(hash, {
-          rotation, sidebarView, scrollMode, spreadMode,
-        });
-        // Make all navigation keys work on document load,
-        // unless the viewer is embedded in a web page.
-        if (!this.isViewerEmbedded) {
-          pdfViewer.focus();
-        }
-
-        // For documents with different page sizes, once all pages are resolved,
-        // ensure that the correct location becomes visible on load.
-        // (To reduce the risk, in very large and/or slow loading documents,
-        //  that the location changes *after* the user has started interacting
-        //  with the viewer, wait for either `pagesPromise` or a timeout.)
-        await Promise.race([
-          pagesPromise,
-          new Promise((resolve) => {
-            setTimeout(resolve, FORCE_PAGES_LOADED_TIMEOUT);
-          }),
-        ]);
-        if (!initialBookmark && !hash) {
-          return;
-        }
-        if (pdfViewer.hasEqualPageSizes) {
-          return;
-        }
-        this.initialBookmark = initialBookmark;
-
+        this.setInitialView();
         // eslint-disable-next-line no-self-assign
         pdfViewer.currentScaleValue = pdfViewer.currentScaleValue;
         // Re-apply the initial document location.
-        this.setInitialView(hash);
+        this.setInitialView();
       }).catch(() => {
         // Ensure that the document is always completely initialized,
         // even if there are any errors thrown above.
@@ -335,28 +264,6 @@ let PDFViewerApplication = {
         // blank on load, always trigger rendering here.
         pdfViewer.update();
       });
-    });
-
-    pdfDocument.getPageLabels().then((labels) => {
-      if (!labels || AppOptions.get('disablePageLabels')) {
-        return;
-      }
-      let i = 0, numLabels = labels.length;
-      if (numLabels !== this.pagesCount) {
-        console.error('The number of Page Labels does not match ' +
-                      'the number of pages in the document.');
-        return;
-      }
-      // Ignore page labels that correspond to standard page numbering.
-      while (i < numLabels && labels[i] === (i + 1).toString()) {
-        i++;
-      }
-      if (i === numLabels) {
-        return;
-      }
-
-      pdfViewer.setPageLabels(labels);
-      pdfThumbnailViewer.setPageLabels(labels);
     });
 
     pagesPromise.then(() => {
