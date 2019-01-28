@@ -5,9 +5,7 @@ import {
   parseQueryString
 } from './ui_utils';
 import {
-  getDocument, getFilenameFromUrl, GlobalWorkerOptions,
-  InvalidPDFException,  MissingPDFException, 
-  UnexpectedResponseException, UNSUPPORTED_FEATURES,
+  getDocument, getFilenameFromUrl, GlobalWorkerOptions, UNSUPPORTED_FEATURES,
   version
 } from 'pdfjs-lib';
 import { PDFRenderingQueue } from './pdf_rendering_queue';
@@ -60,7 +58,7 @@ let PDFViewerApplication = {
       viewer,
       renderingQueue: pdfRenderingQueue,
       linkService: pdfLinkService,
-      renderer: AppOptions.get('renderer')
+      renderer: AppOptions.get('renderer')// canvas
     });
     pdfRenderingQueue.setViewer(this.pdfViewer);
     pdfLinkService.setViewer(this.pdfViewer);
@@ -125,9 +123,7 @@ let PDFViewerApplication = {
       this.pdfViewer.setDocument(null);
       this.pdfLinkService.setDocument(null);
     }
-    this.store = null;
     this.isInitialViewSet = false;
-    this.downloadComplete = false;
     this.url = '';
     this.baseUrl = '';
     return promise;
@@ -152,70 +148,18 @@ let PDFViewerApplication = {
     for (let key in workerParameters) {
       GlobalWorkerOptions[key] = workerParameters[key];
     }
-
     let parameters = Object.create(null);
-    if (typeof file === 'string') { // URL
-      this.setTitleUsingUrl(file);
-      parameters.url = file;
-    } else if (file && 'byteLength' in file) { // ArrayBuffer
-      parameters.data = file;
-    } else if (file.url && file.originalUrl) {
-      this.setTitleUsingUrl(file.originalUrl);
-      parameters.url = file.url;
-    }
-    if (typeof PDFJSDev === 'undefined' || !PDFJSDev.test('PRODUCTION')) {
-      parameters.docBaseUrl = document.URL.split('#')[0];
-    } else if (typeof PDFJSDev !== 'undefined' &&
-               PDFJSDev.test('FIREFOX || MOZCENTRAL || CHROME')) {
-      parameters.docBaseUrl = this.baseUrl;
-    }
-    // Set the necessary API parameters, using the available options.
-    const apiParameters = AppOptions.getAll('api');
-    for (let key in apiParameters) {
-      parameters[key] = apiParameters[key];
-    }
-
-    if (args) {
-      for (let prop in args) {
-        if (prop === 'length') {
-          this.pdfDocumentProperties.setFileSize(args[prop]);
-        }
-        parameters[prop] = args[prop];
-      }
-    }
+    parameters.url = file; // url
 
     let loadingTask = getDocument(parameters);
     this.pdfLoadingTask = loadingTask;
 
     return loadingTask.promise.then((pdfDocument) => {
       this.load(pdfDocument);
-    }, (exception) => {
+    }, () => {
       if (loadingTask !== this.pdfLoadingTask) {
         return; // Ignore errors for previously opened PDF files.
-      }
-
-      let message = exception && exception.message;
-      let loadingErrorMessage;
-      if (exception instanceof InvalidPDFException) {
-        // change error message also for other builds
-        loadingErrorMessage = this.l10n.get('invalid_file_error', null,
-                                            'Invalid or corrupted PDF file.');
-      } else if (exception instanceof MissingPDFException) {
-        // special message for missing PDF's
-        loadingErrorMessage = this.l10n.get('missing_file_error', null,
-                                            'Missing PDF file.');
-      } else if (exception instanceof UnexpectedResponseException) {
-        loadingErrorMessage = this.l10n.get('unexpected_response_error', null,
-                                            'Unexpected server response.');
-      } else {
-        loadingErrorMessage = this.l10n.get('loading_error', null,
-          'An error occurred while loading the PDF.');
-      }
-
-      return loadingErrorMessage.then((msg) => {
-        this.error(msg, { message, });
-        throw new Error(msg);
-      });
+      }      
     });
   },
 
@@ -233,9 +177,7 @@ let PDFViewerApplication = {
 
     let pdfViewer = this.pdfViewer;
     pdfViewer.setDocument(pdfDocument);
-    console.log('test')
     let firstPagePromise = pdfViewer.firstPagePromise;
-    let pagesPromise = pdfViewer.pagesPromise;
 
     firstPagePromise.then((pdfPage) => {
       Promise.all([
@@ -250,114 +192,13 @@ let PDFViewerApplication = {
         // Ensure that the document is always completely initialized,
         // even if there are any errors thrown above.
         this.setInitialView();
-      }).then(function() {
+      }).then(function () {
         // At this point, rendering of the initial page(s) should always have
         // started (and may even have completed).
         // To prevent any future issues, e.g. the document being completely
         // blank on load, always trigger rendering here.
         pdfViewer.update();
       });
-    });
-
-    pagesPromise.then(() => {
-      if (!this.supportsPrinting) {
-        return;
-      }
-      pdfDocument.getJavaScript().then((javaScript) => {
-        if (!javaScript) {
-          return;
-        }
-        javaScript.some((js) => {
-          if (!js) { // Don't warn/fallback for empty JavaScript actions.
-            return false;
-          }
-          console.warn('Warning: JavaScript is not supported');
-          this.fallback(UNSUPPORTED_FEATURES.javaScript);
-          return true;
-        });
-
-        // Hack to support auto printing.
-        let regex = /\bprint\s*\(/;
-        for (let i = 0, ii = javaScript.length; i < ii; i++) {
-          let js = javaScript[i];
-          if (js && regex.test(js)) {
-            setTimeout(function() {
-              window.print();
-            });
-            return;
-          }
-        }
-      });
-    });
-
-
-    pdfDocument.getMetadata().then(
-        ({ info, metadata, contentDispositionFilename, }) => {
-      this.documentInfo = info;
-      this.metadata = metadata;
-      this.contentDispositionFilename = contentDispositionFilename;
-
-      // Provides some basic debug information
-      console.log('PDF ' + pdfDocument.fingerprint + ' [' +
-                  info.PDFFormatVersion + ' ' + (info.Producer || '-').trim() +
-                  ' / ' + (info.Creator || '-').trim() + ']' +
-                  ' (PDF.js: ' + (version || '-') +
-                  (AppOptions.get('enableWebGL') ? ' [WebGL]' : '') + ')');
-
-      let pdfTitle;
-      if (metadata && metadata.has('dc:title')) {
-        let title = metadata.get('dc:title');
-        // Ghostscript sometimes return 'Untitled', sets the title to 'Untitled'
-        if (title !== 'Untitled') {
-          pdfTitle = title;
-        }
-      }
-
-      if (!pdfTitle && info && info['Title']) {
-        pdfTitle = info['Title'];
-      }
-
-      if (pdfTitle) {
-        this.setTitle(
-          `${pdfTitle} - ${contentDispositionFilename || document.title}`);
-      } else if (contentDispositionFilename) {
-        this.setTitle(contentDispositionFilename);
-      }
-
-      if (info.IsAcroFormPresent) {
-        console.warn('Warning: AcroForm/XFA is not supported');
-        this.fallback(UNSUPPORTED_FEATURES.forms);
-      }
-
-      if (typeof PDFJSDev !== 'undefined' &&
-          PDFJSDev.test('FIREFOX || MOZCENTRAL')) {
-        let versionId = String(info.PDFFormatVersion).slice(-1) | 0;
-        let generatorId = 0;
-        const KNOWN_GENERATORS = [
-          'acrobat distiller', 'acrobat pdfwriter', 'adobe livecycle',
-          'adobe pdf library', 'adobe photoshop', 'ghostscript', 'tcpdf',
-          'cairo', 'dvipdfm', 'dvips', 'pdftex', 'pdfkit', 'itext', 'prince',
-          'quarkxpress', 'mac os x', 'microsoft', 'openoffice', 'oracle',
-          'luradocument', 'pdf-xchange', 'antenna house', 'aspose.cells', 'fpdf'
-        ];
-        if (info.Producer) {
-          KNOWN_GENERATORS.some(function (generator, s, i) {
-            if (!generator.includes(s)) {
-              return false;
-            }
-            generatorId = i + 1;
-            return true;
-          }.bind(null, info.Producer.toLowerCase()));
-        }
-        let formType = !info.IsAcroFormPresent ? null : info.IsXFAPresent ?
-                      'xfa' : 'acroform';
-        this.externalServices.reportTelemetry({
-          type: 'documentInfo',
-          version: versionId,
-          generator: generatorId,
-          formType,
-        });
-      }
     });
   },
 
