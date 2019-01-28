@@ -565,45 +565,30 @@ function webViewerInitialized() {
   }
 }
 
-let webViewerOpenFileViaURL;
-if (typeof PDFJSDev === 'undefined' || PDFJSDev.test('GENERIC')) {
-  console.log('king')
-  webViewerOpenFileViaURL = function webViewerOpenFileViaURL(file) {
-    if (file && file.lastIndexOf('file:', 0) === 0) {
-      // file:-scheme. Load the contents in the main thread because QtWebKit
-      // cannot load file:-URLs in a Web Worker. file:-URLs are usually loaded
-      // very quickly, so there is no need to set up progress event listeners.
-      PDFViewerApplication.setTitleUsingUrl(file);
-      let xhr = new XMLHttpRequest();
-      xhr.onload = function() {
-        PDFViewerApplication.open(new Uint8Array(xhr.response));
-      };
-      try {
-        xhr.open('GET', file);
-        xhr.responseType = 'arraybuffer';
-        xhr.send();
-      } catch (ex) {
-        throw ex;
-      }
-      return;
+let webViewerOpenFileViaURL = function webViewerOpenFileViaURL(file) {
+  if (file && file.lastIndexOf('file:', 0) === 0) {
+    // file:-scheme. Load the contents in the main thread because QtWebKit
+    // cannot load file:-URLs in a Web Worker. file:-URLs are usually loaded
+    // very quickly, so there is no need to set up progress event listeners.
+    PDFViewerApplication.setTitleUsingUrl(file);
+    let xhr = new XMLHttpRequest();
+    xhr.onload = function () {
+      PDFViewerApplication.open(new Uint8Array(xhr.response));
+    };
+    try {
+      xhr.open('GET', file);
+      xhr.responseType = 'arraybuffer';
+      xhr.send();
+    } catch (ex) {
+      throw ex;
     }
-
-    if (file) {
-      PDFViewerApplication.open(file);
-    }
-  };
-}
-
-
-let zoomDisabledTimeout = null;
-function setZoomDisabledTimeout() {
-  if (zoomDisabledTimeout) {
-    clearTimeout(zoomDisabledTimeout);
+    return;
   }
-  zoomDisabledTimeout = setTimeout(function() {
-    zoomDisabledTimeout = null;
-  }, WHEEL_ZOOM_DISABLED_TIMEOUT);
-}
+
+  if (file) {
+    PDFViewerApplication.open(file);
+  }
+};
 
 
 /* Abstract factory for the print service. */
