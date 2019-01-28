@@ -16,25 +16,6 @@
 
 'use strict';
 
-if (typeof PDFJSDev !== 'undefined' && PDFJSDev.test('CHROME')) {
-  var defaultUrl; // eslint-disable-line no-var
-
-  (function rewriteUrlClosure() {
-    // Run this code outside DOMContentLoaded to make sure that the URL
-    // is rewritten as soon as possible.
-    let queryString = document.location.search.slice(1);
-    let m = /(^|&)file=([^&]*)/.exec(queryString);
-    defaultUrl = m ? decodeURIComponent(m[2]) : '';
-
-    // Example: chrome-extension://.../http://example.com/file.pdf
-    let humanReadableUrl = '/' + defaultUrl + location.hash;
-    history.replaceState(history.state, '', humanReadableUrl);
-    if (top === window) {
-      chrome.runtime.sendMessage('showPageAction');
-    }
-  })();
-}
-
 let pdfjsWebApp, pdfjsWebAppOptions;
 if (typeof PDFJSDev !== 'undefined' && PDFJSDev.test('PRODUCTION')) {
   pdfjsWebApp = require('./app.js');
