@@ -6,7 +6,7 @@ import { PDFLinkService } from './pdf_link_service';
 import { PDFViewer } from './pdf_viewer';
 
 let PDFViewerApplication = {
-  initialized: false,
+  //initialized: false,
   appConfig: null,
   pdfDocument: null,
   pdfLoadingTask: null,
@@ -21,7 +21,7 @@ let PDFViewerApplication = {
     //this.preferences = this.externalServices.createPreferences();
     this.appConfig = appConfig;
     await this._initializeViewerComponents();
-    this.initialized = true;
+    //this.initialized = true;
     return appConfig.url;
   },
 
@@ -62,7 +62,6 @@ let PDFViewerApplication = {
    *                      destruction is completed.
    */
   async close() {
-
     if (!this.pdfLoadingTask) {
       return;
     }
