@@ -137,26 +137,6 @@ let PDFViewerApplication = {
     this.initialize(config).then(webViewerInitialized);
   },
 
-  zoomIn(ticks) {
-    let newScale = this.pdfViewer.currentScale;
-    do {
-      newScale = (newScale * DEFAULT_SCALE_DELTA).toFixed(2);
-      newScale = Math.ceil(newScale * 10) / 10;
-      newScale = Math.min(MAX_SCALE, newScale);
-    } while (--ticks > 0 && newScale < MAX_SCALE);
-    this.pdfViewer.currentScaleValue = newScale;
-  },
-
-  zoomOut(ticks) {
-    let newScale = this.pdfViewer.currentScale;
-    do {
-      newScale = (newScale / DEFAULT_SCALE_DELTA).toFixed(2);
-      newScale = Math.floor(newScale * 10) / 10;
-      newScale = Math.max(MIN_SCALE, newScale);
-    } while (--ticks > 0 && newScale > MIN_SCALE);
-    this.pdfViewer.currentScaleValue = newScale;
-  },
-
   get pagesCount() {
     return this.pdfDocument ? this.pdfDocument.numPages : 0;
   },
@@ -167,92 +147,6 @@ let PDFViewerApplication = {
 
   get page() {
     return this.pdfViewer.currentPageNumber;
-  },
-
-  get printing() {
-    return !!this.printService;
-  },
-
-  get supportsPrinting() {
-    return PDFPrintServiceFactory.instance.supportsPrinting;
-  },
-
-  get supportsFullscreen() {
-    let support;
-    if (typeof PDFJSDev !== 'undefined' && PDFJSDev.test('MOZCENTRAL')) {
-      support = document.fullscreenEnabled === true ||
-                document.mozFullScreenEnabled === true;
-    } else {
-      let doc = document.documentElement;
-      support = !!(doc.requestFullscreen || doc.mozRequestFullScreen ||
-                   doc.webkitRequestFullScreen || doc.msRequestFullscreen);
-
-      if (document.fullscreenEnabled === false ||
-          document.mozFullScreenEnabled === false ||
-          document.webkitFullscreenEnabled === false ||
-          document.msFullscreenEnabled === false) {
-        support = false;
-      }
-    }
-    return shadow(this, 'supportsFullscreen', support);
-  },
-
-  get supportsIntegratedFind() {
-    return this.externalServices.supportsIntegratedFind;
-  },
-
-  get supportsDocumentFonts() {
-    return this.externalServices.supportsDocumentFonts;
-  },
-
-  get supportsDocumentColors() {
-    return this.externalServices.supportsDocumentColors;
-  },
-
-  get loadingBar() {
-    return null
-  },
-
-  get supportedMouseWheelZoomModifierKeys() {
-    return this.externalServices.supportedMouseWheelZoomModifierKeys;
-  },
-
-  initPassiveLoading() {
-    if (typeof PDFJSDev === 'undefined' ||
-        !PDFJSDev.test('FIREFOX || MOZCENTRAL || CHROME')) {
-      throw new Error('Not implemented: initPassiveLoading');
-    }
-    this.externalServices.initPassiveLoading({
-      onOpenWithTransport(url, length, transport) {
-        PDFViewerApplication.open(url, { range: transport, });
-
-        if (length) {
-          PDFViewerApplication.pdfDocumentProperties.setFileSize(length);
-        }
-      },
-      onOpenWithData(data) {
-        PDFViewerApplication.open(data);
-      },
-      onOpenWithURL(url, length, originalUrl) {
-        let file = url, args = null;
-        if (length !== undefined) {
-          args = { length, };
-        }
-        if (originalUrl !== undefined) {
-          file = { url, originalUrl, };
-        }
-        PDFViewerApplication.open(file, args);
-      },
-      onError(err) {
-        PDFViewerApplication.l10n.get('loading_error', null,
-            'An error occurred while loading the PDF.').then((msg) => {
-          PDFViewerApplication.error(msg, err);
-        });
-      },
-      onProgress(loaded, total) {
-        PDFViewerApplication.progress(loaded / total);
-      },
-    });
   },
 
   setTitleUsingUrl(url = '') {
@@ -367,18 +261,6 @@ let PDFViewerApplication = {
     let loadingTask = getDocument(parameters);
     this.pdfLoadingTask = loadingTask;
 
-    loadingTask.onPassword = (updateCallback, reason) => {
-      this.passwordPrompt.setUpdateCallback(updateCallback, reason);
-      this.passwordPrompt.open();
-    };
-
-    loadingTask.onProgress = ({ loaded, total, }) => {
-      this.progress(loaded / total);
-    };
-
-    // Listen for unsupported features to trigger the fallback UI.
-    loadingTask.onUnsupportedFeature = this.fallback.bind(this);
-
     return loadingTask.promise.then((pdfDocument) => {
       this.load(pdfDocument);
     }, (exception) => {
@@ -409,140 +291,6 @@ let PDFViewerApplication = {
         throw new Error(msg);
       });
     });
-  },
-
-  download() {
-    function downloadByUrl() {
-      downloadManager.downloadUrl(url, filename);
-    }
-
-    let url = this.baseUrl;
-    // Use this.url instead of this.baseUrl to perform filename detection based
-    // on the reference fragment as ultimate fallback if needed.
-    let filename = this.contentDispositionFilename ||
-      getPDFFileNameFromURL(this.url);
-    let downloadManager = this.downloadManager;
-    downloadManager.onerror = (err) => {
-      // This error won't really be helpful because it's likely the
-      // fallback won't work either (or is already open).
-      this.error(`PDF failed to download: ${err}`);
-    };
-
-    // When the PDF document isn't ready, or the PDF file is still downloading,
-    // simply download using the URL.
-    if (!this.pdfDocument || !this.downloadComplete) {
-      downloadByUrl();
-      return;
-    }
-
-    this.pdfDocument.getData().then(function(data) {
-      const blob = new Blob([data], { type: 'application/pdf', });
-      downloadManager.download(blob, url, filename);
-    }).catch(downloadByUrl); // Error occurred, try downloading with the URL.
-  },
-
-  fallback(featureId) {
-    if (typeof PDFJSDev !== 'undefined' &&
-        PDFJSDev.test('FIREFOX || MOZCENTRAL')) {
-      // Only trigger the fallback once so we don't spam the user with messages
-      // for one PDF.
-      if (this.fellback) {
-        return;
-      }
-      this.fellback = true;
-      this.externalServices.fallback({
-        featureId,
-        url: this.baseUrl,
-      }, function response(download) {
-        if (!download) {
-          return;
-        }
-        PDFViewerApplication.download();
-      });
-    }
-  },
-
-  /**
-   * Show the error box.
-   * @param {String} message A message that is human readable.
-   * @param {Object} moreInfo (optional) Further information about the error
-   *                            that is more technical.  Should have a 'message'
-   *                            and optionally a 'stack' property.
-   */
-  error(message, moreInfo) {
-    let moreInfoText = [this.l10n.get('error_version_info',
-      { version: version || '?', build: build || '?', },
-      'PDF.js v{{version}} (build: {{build}})')];
-    if (moreInfo) {
-      moreInfoText.push(
-        this.l10n.get('error_message', { message: moreInfo.message, },
-                      'Message: {{message}}'));
-      if (moreInfo.stack) {
-        moreInfoText.push(
-          this.l10n.get('error_stack', { stack: moreInfo.stack, },
-                        'Stack: {{stack}}'));
-      } else {
-        if (moreInfo.filename) {
-          moreInfoText.push(
-            this.l10n.get('error_file', { file: moreInfo.filename, },
-                          'File: {{file}}'));
-        }
-        if (moreInfo.lineNumber) {
-          moreInfoText.push(
-            this.l10n.get('error_line', { line: moreInfo.lineNumber, },
-                          'Line: {{line}}'));
-        }
-      }
-    }
-
-    if (typeof PDFJSDev === 'undefined' ||
-        !PDFJSDev.test('FIREFOX || MOZCENTRAL')) {
-      let errorWrapperConfig = this.appConfig.errorWrapper;
-      let errorWrapper = errorWrapperConfig.container;
-      errorWrapper.removeAttribute('hidden');
-
-      let errorMessage = errorWrapperConfig.errorMessage;
-      errorMessage.textContent = message;
-
-      let closeButton = errorWrapperConfig.closeButton;
-      closeButton.onclick = function() {
-        errorWrapper.setAttribute('hidden', 'true');
-      };
-
-      let errorMoreInfo = errorWrapperConfig.errorMoreInfo;
-      let moreInfoButton = errorWrapperConfig.moreInfoButton;
-      let lessInfoButton = errorWrapperConfig.lessInfoButton;
-      moreInfoButton.onclick = function() {
-        errorMoreInfo.removeAttribute('hidden');
-        moreInfoButton.setAttribute('hidden', 'true');
-        lessInfoButton.removeAttribute('hidden');
-        errorMoreInfo.style.height = errorMoreInfo.scrollHeight + 'px';
-      };
-      lessInfoButton.onclick = function() {
-        errorMoreInfo.setAttribute('hidden', 'true');
-        moreInfoButton.removeAttribute('hidden');
-        lessInfoButton.setAttribute('hidden', 'true');
-      };
-      moreInfoButton.removeAttribute('hidden');
-      lessInfoButton.setAttribute('hidden', 'true');
-      Promise.all(moreInfoText).then((parts) => {
-        errorMoreInfo.value = parts.join('\n');
-      });
-    } else {
-      Promise.all(moreInfoText).then((parts) => {
-        console.error(message + '\n' + parts.join('\n'));
-      });
-      this.fallback();
-    }
-  },
-
-  progress(level) {
-    if (this.downloadComplete) {
-      // Don't accidentally show the loading bar again when the entire file has
-      // already been fetched (only an issue when disableAutoFetch is enabled).
-      return;
-    }
-    let percent = Math.round(level * 100);
   },
 
   load(pdfDocument) {
@@ -783,46 +531,14 @@ let PDFViewerApplication = {
     });
   },
 
-  setInitialView(storedHash, { rotation, sidebarView,
-                               scrollMode, spreadMode, } = {}) {
-    let setRotation = (angle) => {
-      if (isValidRotation(angle)) {
-        this.pdfViewer.pagesRotation = angle;
-      }
-    };
-    let setViewerModes = (scroll, spread) => {
-      if (Number.isInteger(scroll)) {
-        this.pdfViewer.scrollMode = scroll;
-      }
-      if (Number.isInteger(spread)) {
-        this.pdfViewer.spreadMode = spread;
-      }
-    };
+  setInitialView() {
+    //this.isInitialViewSet = true;
 
-    // Putting these before isInitialViewSet = true prevents these values from
-    // being stored in the document history (and overriding any future changes
-    // made to the corresponding global preferences), just this once.
-    setViewerModes(scrollMode, spreadMode);
-
-    this.isInitialViewSet = true;
-
-    if (this.initialBookmark) {
-      setRotation(this.initialRotation);
-      delete this.initialRotation;
-
-      this.pdfLinkService.setHash(this.initialBookmark);
-      this.initialBookmark = null;
-    } else if (storedHash) {
-      setRotation(rotation);
-
-      this.pdfLinkService.setHash(storedHash);
-    }
-
-    if (!this.pdfViewer.currentScaleValue) {
-      // Scale was not initialized: invalid bookmark or scale was not specified.
-      // Setting the default one.
-      this.pdfViewer.currentScaleValue = DEFAULT_SCALE_VALUE;
-    }
+    //if (!this.pdfViewer.currentScaleValue) {
+    //  // Scale was not initialized: invalid bookmark or scale was not specified.
+    //  // Setting the default one.
+    //  this.pdfViewer.currentScaleValue = DEFAULT_SCALE_VALUE;
+    //}
   },
 
   cleanup() {
@@ -836,37 +552,6 @@ let PDFViewerApplication = {
     //  this.pdfDocument.cleanup();
     //}
     this.pdfDocument.cleanup();
-  },
-
-  forceRendering() {
-  },
-
-  beforePrint() {
-    
-
-    
-    
-  },
-
-  afterPrint: function pdfViewSetupAfterPrint() {
-    
-  },
-
-  rotatePages(delta) {
-    if (!this.pdfDocument) {
-      return;
-    }
-    let newRotation = (this.pdfViewer.pagesRotation + 360 + delta) % 360;
-    this.pdfViewer.pagesRotation = newRotation;
-    // Note that the thumbnail viewer is updated, and rendering is triggered,
-    // in the 'rotationchanging' event handler.
-  },
-
-  requestPresentationMode() {
-    if (!this.pdfPresentationMode) {
-      return;
-    }
-    this.pdfPresentationMode.request();
   }
 };
 
