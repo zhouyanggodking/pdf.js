@@ -50,8 +50,7 @@ let PDFViewerApplication = {
     this.pdfRenderingQueue = pdfRenderingQueue;
 
     let pdfLinkService = new PDFLinkService({
-      externalLinkTarget: AppOptions.get('externalLinkTarget'),
-      externalLinkRel: AppOptions.get('externalLinkRel'),
+      
     });
     this.pdfLinkService = pdfLinkService;
 
