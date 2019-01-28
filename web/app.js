@@ -179,41 +179,11 @@ let PDFViewerApplication = {
 
 function webViewerInitialized() {
   let file = 'compressed.tracemonkey-pldi-09.pdf';
-
-  try {
-    webViewerOpenFileViaURL(file);
-  } catch (reason) {
-    console.log('error')
-    PDFViewerApplication.l10n.get('loading_error', null,
-        'An error occurred while loading the PDF.').then((msg) => {
-      PDFViewerApplication.error(msg, reason);
-    });
-  }
+  webViewerOpenFileViaURL(file);
 }
 
 let webViewerOpenFileViaURL = function webViewerOpenFileViaURL(file) {
-  if (file && file.lastIndexOf('file:', 0) === 0) {
-    // file:-scheme. Load the contents in the main thread because QtWebKit
-    // cannot load file:-URLs in a Web Worker. file:-URLs are usually loaded
-    // very quickly, so there is no need to set up progress event listeners.
-    PDFViewerApplication.setTitleUsingUrl(file);
-    let xhr = new XMLHttpRequest();
-    xhr.onload = function () {
-      PDFViewerApplication.open(new Uint8Array(xhr.response));
-    };
-    try {
-      xhr.open('GET', file);
-      xhr.responseType = 'arraybuffer';
-      xhr.send();
-    } catch (ex) {
-      throw ex;
-    }
-    return;
-  }
-
-  if (file) {
-    PDFViewerApplication.open(file);
-  }
+  PDFViewerApplication.open(file);
 };
 
 
